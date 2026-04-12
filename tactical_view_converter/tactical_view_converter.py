@@ -8,7 +8,7 @@ from .homography import Homography
 
 folder_path = pathlib.Path(__file__).parent.resolve()
 sys.path.append(os.path.join(folder_path,"../"))
-from utils import get_foot_position,measure_distance
+from utils import get_foot_position, measure_distance, get_center_of_bbox
 
 class TacticalViewConverter:
     def __init__(self, court_image_path):
@@ -114,6 +114,23 @@ class TacticalViewConverter:
             
         return keypoints_list
 
+    def _try_homography_from_keypoints(self, frame_keypoints_obj):
+        """
+        Build a Homography from one frame's court keypoints, or return None if unreliable.
+        """
+        frame_keypoints = frame_keypoints_obj.xy.tolist()[0]
+        if frame_keypoints is None or len(frame_keypoints) == 0:
+            return None
+        valid_indices = [i for i, kp in enumerate(frame_keypoints) if kp[0] > 0 and kp[1] > 0]
+        if len(valid_indices) < 4:
+            return None
+        source_points = np.array([frame_keypoints[i] for i in valid_indices], dtype=np.float32)
+        target_points = np.array([self.key_points[i] for i in valid_indices], dtype=np.float32)
+        try:
+            return Homography(source_points, target_points)
+        except (ValueError, cv2.error):
+            return None
+
     def transform_players_to_tactical_view(self, keypoints_list, player_tracks):
         """
         Transform player positions from video frame coordinates to tactical view coordinates.
@@ -128,56 +145,69 @@ class TacticalViewConverter:
                 in the tactical view coordinate system. The list index corresponds to the frame number.
         """
         tactical_player_positions = []
-        
-        for frame_idx, (frame_keypoints, frame_tracks) in enumerate(zip(keypoints_list, player_tracks)):
-            # Initialize empty dictionary for this frame
+
+        for frame_keypoints, frame_tracks in zip(keypoints_list, player_tracks):
             tactical_positions = {}
-
-            frame_keypoints = frame_keypoints.xy.tolist()[0]
-
-            # Skip frames with insufficient keypoints
-            if frame_keypoints is None or len(frame_keypoints) == 0:
+            homography = self._try_homography_from_keypoints(frame_keypoints)
+            if homography is None:
                 tactical_player_positions.append(tactical_positions)
                 continue
-            
-            # Get detected keypoints for this frame
-            detected_keypoints = frame_keypoints
-            
-            # Filter out undetected keypoints (those with coordinates (0,0))
-            valid_indices = [i for i, kp in enumerate(detected_keypoints) if kp[0] > 0 and kp[1] > 0]
-            
-            # Need at least 4 points for a reliable homography
-            if len(valid_indices) < 4:
-                tactical_player_positions.append(tactical_positions)
-                continue
-            
-            # Create source and target point arrays for homography
-            source_points = np.array([detected_keypoints[i] for i in valid_indices], dtype=np.float32)
-            target_points = np.array([self.key_points[i] for i in valid_indices], dtype=np.float32)
-            
+
             try:
-                # Create homography transformer
-                homography = Homography(source_points, target_points)
-                
-                # Transform each player's position
                 for player_id, player_data in frame_tracks.items():
                     bbox = player_data["bbox"]
-                    # Use bottom center of bounding box as player position
                     player_position = np.array([get_foot_position(bbox)])
-                    # Transform to tactical view coordinates
                     tactical_position = homography.transform_points(player_position)
-
-                    # If tactical position is not in the tactical view, skip
-                    if tactical_position[0][0] < 0 or tactical_position[0][0] > self.width or tactical_position[0][1] < 0 or tactical_position[0][1] > self.height:
+                    if (
+                        tactical_position[0][0] < 0
+                        or tactical_position[0][0] > self.width
+                        or tactical_position[0][1] < 0
+                        or tactical_position[0][1] > self.height
+                    ):
                         continue
-
                     tactical_positions[player_id] = tactical_position[0].tolist()
-                    
-            except (ValueError, cv2.error) as e:
-                # If homography fails, continue with empty dictionary
+            except (ValueError, cv2.error):
                 pass
-            
+
             tactical_player_positions.append(tactical_positions)
-        
+
         return tactical_player_positions
+
+    def transform_ball_to_tactical_view(self, keypoints_list, ball_tracks):
+        """
+        Map ball bbox center to tactical (top-down) court coordinates per frame.
+
+        Returns:
+            list: For each frame, either [tactical_x, tactical_y] in tactical-view pixels
+                (same space as ``transform_players_to_tactical_view``), or None if the ball
+                or homography is unavailable.
+        """
+        tactical_ball_positions = []
+
+        for frame_keypoints, ball_frame in zip(keypoints_list, ball_tracks):
+            homography = self._try_homography_from_keypoints(frame_keypoints)
+            if homography is None:
+                tactical_ball_positions.append(None)
+                continue
+
+            ball_info = ball_frame.get(1, {})
+            bbox = ball_info.get("bbox") if ball_info else None
+            if not bbox or len(bbox) < 4:
+                tactical_ball_positions.append(None)
+                continue
+
+            cx, cy = get_center_of_bbox(bbox)
+            ball_point = np.array([[float(cx), float(cy)]], dtype=np.float32)
+
+            try:
+                tactical_position = homography.transform_points(ball_point)
+                tx, ty = float(tactical_position[0][0]), float(tactical_position[0][1])
+                if tx < 0 or tx > self.width or ty < 0 or ty > self.height:
+                    tactical_ball_positions.append(None)
+                else:
+                    tactical_ball_positions.append([tx, ty])
+            except (ValueError, cv2.error):
+                tactical_ball_positions.append(None)
+
+        return tactical_ball_positions
 

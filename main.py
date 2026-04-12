@@ -1,6 +1,11 @@
 import os
 import argparse
-from utils import read_video, save_video
+from utils import (
+    read_video,
+    save_video,
+    get_video_properties,
+    export_annotation_tables,
+)
 from trackers import PlayerTracker, BallTracker
 from team_assigner import TeamAssigner
 from court_keypoint_detector import CourtKeypointDetector
@@ -33,6 +38,17 @@ def parse_args():
                         help='Path to output video file')
     parser.add_argument('--stub_path', type=str, default=STUBS_DEFAULT_PATH,
                         help='Path to stub directory')
+    parser.add_argument(
+        '--export_dir',
+        type=str,
+        default=None,
+        help='Directory for CSV annotation tables (default: <output video dir>/annotation_tables)',
+    )
+    parser.add_argument(
+        '--no_export_tables',
+        action='store_true',
+        help='Skip writing per_frame.csv and players_long.csv',
+    )
     return parser.parse_args()
 
 def main():
@@ -40,6 +56,8 @@ def main():
     
     # Read Video
     video_frames = read_video(args.input_video)
+    vid_props = get_video_properties(args.input_video)
+    fps = float(vid_props["fps"])
     
     ## Initialize Tracker
     player_tracker = PlayerTracker(PLAYER_DETECTOR_PATH)
@@ -93,7 +111,12 @@ def main():
     )
 
     court_keypoints_per_frame = tactical_view_converter.validate_keypoints(court_keypoints_per_frame)
-    tactical_player_positions = tactical_view_converter.transform_players_to_tactical_view(court_keypoints_per_frame,player_tracks)
+    tactical_player_positions = tactical_view_converter.transform_players_to_tactical_view(
+        court_keypoints_per_frame, player_tracks
+    )
+    tactical_ball_positions = tactical_view_converter.transform_ball_to_tactical_view(
+        court_keypoints_per_frame, ball_tracks
+    )
 
     # Speed and Distance Calculator
     speed_and_distance_calculator = SpeedAndDistanceCalculator(
@@ -103,7 +126,9 @@ def main():
         tactical_view_converter.actual_height_in_meters
     )
     player_distances_per_frame = speed_and_distance_calculator.calculate_distance(tactical_player_positions)
-    player_speed_per_frame = speed_and_distance_calculator.calculate_speed(player_distances_per_frame)
+    player_speed_per_frame = speed_and_distance_calculator.calculate_speed(
+        player_distances_per_frame, fps=fps
+    )
 
     # Draw output   
     # Initialize Drawers
@@ -156,6 +181,27 @@ def main():
                                                     player_assignment,
                                                     ball_aquisition,
                                                     )
+
+    if not args.no_export_tables:
+        out_base = os.path.dirname(os.path.abspath(args.output_video)) or "."
+        export_dir = args.export_dir or os.path.join(out_base, "annotation_tables")
+        export_annotation_tables(
+            export_dir,
+            ball_tracks,
+            tactical_ball_positions,
+            tactical_view_converter.width,
+            tactical_view_converter.height,
+            tactical_view_converter.actual_width_in_meters,
+            tactical_view_converter.actual_height_in_meters,
+            player_assignment,
+            ball_aquisition,
+            passes,
+            interceptions,
+            tactical_player_positions,
+            player_distances_per_frame,
+            player_speed_per_frame,
+            fps,
+        )
 
     # Save video
     save_video(output_video_frames, args.output_video)

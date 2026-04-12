@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "basketball-analysis"
+version = "0.1.0"
+description = "Basketball video analysis with detection, tracking, and annotation."
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "numpy==1.24.4",
+    "opencv-python==4.9.0.80",
+    "opencv-python-headless==4.10.0.84",
+    "pandas==2.0.3",
+    "Pillow==11.1.0",
+    "roboflow==1.1.51",
+    "supervision==0.25.1",
+    "torch==2.2.0",
+    "transformers==4.46.3",
+    "ultralytics==8.3.67",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]

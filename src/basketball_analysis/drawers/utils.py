@@ -5,11 +5,10 @@ This module includes functions to draw triangles and ellipses on frames, which c
 to represent various annotations such as player positions or ball locations in sports analysis.
 """
 
-import cv2 
+import cv2
 import numpy as np
-import sys 
-sys.path.append('../')
-from utils import get_center_of_bbox, get_bbox_width, get_foot_position
+
+from basketball_analysis.utils import get_center_of_bbox, get_bbox_width, get_foot_position
 
 def draw_traingle(frame,bbox,color):
     """

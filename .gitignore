@@ -7,3 +7,5 @@ dist/
 *.pkl
 .venv
 input_videos/
+*.csv
+.DS_Store

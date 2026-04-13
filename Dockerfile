@@ -15,7 +15,10 @@ RUN pip install -r requirements.txt
 # Copy the rest of the application
 COPY . .
 
+# Install package (src layout) so imports resolve
+RUN pip install --no-cache-dir .
+
 # Create necessary directories
 RUN mkdir -p input_videos output_videos models
 
-ENTRYPOINT ["python", "main.py"]
+ENTRYPOINT ["python", "-m", "basketball_analysis"]

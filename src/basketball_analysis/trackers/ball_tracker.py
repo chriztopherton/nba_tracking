@@ -2,9 +2,8 @@ from ultralytics import YOLO
 import supervision as sv
 import numpy as np
 import pandas as pd
-import sys 
-sys.path.append('../')
-from utils import read_stub, save_stub
+
+from basketball_analysis.utils import read_stub, save_stub
 
 
 class BallTracker:

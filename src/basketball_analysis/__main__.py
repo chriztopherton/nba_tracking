@@ -1,5 +1,3 @@
-"""Backward-compatible entrypoint. Prefer: python -m basketball_analysis"""
-
 from basketball_analysis.cli import main
 
 if __name__ == "__main__":

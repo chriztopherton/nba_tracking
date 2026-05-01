@@ -1,6 +1,11 @@
 __pycache__/
+*.egg-info/
+build/
+dist/
 *.pt
 *.avi
 *.pkl
 .venv
-input_videos/
+data/input/
+*.csv
+.DS_Store

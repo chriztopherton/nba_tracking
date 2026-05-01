@@ -1,9 +1,4 @@
-import os
-import sys
-import pathlib
-folder_path = pathlib.Path(__file__).parent.resolve()
-sys.path.append(os.path.join(folder_path,"../"))
-from utils import measure_distance
+from basketball_analysis.utils import measure_distance
 
 
 class SpeedAndDistanceCalculator():

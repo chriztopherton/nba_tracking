@@ -1,6 +1,4 @@
-import sys 
-sys.path.append('../')
-from utils.bbox_utils import measure_distance, get_center_of_bbox
+from basketball_analysis.utils.bbox_utils import measure_distance, get_center_of_bbox
 
 class BallAquisitionDetector:
     """

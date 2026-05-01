@@ -2,9 +2,7 @@ from PIL import Image
 import cv2
 from transformers import CLIPProcessor, CLIPModel
 
-import sys 
-sys.path.append('../')
-from utils import read_stub, save_stub
+from basketball_analysis.utils import read_stub, save_stub
 
 class TeamAssigner:
     """

@@ -88,7 +88,7 @@ This repository relies on trained models for detecting basketballs, players, and
    - player_detector.pt  
      (https://drive.google.com/file/d/1fVBLZtPy9Yu6Tf186oS4siotkioHBLHy/view?usp=sharing)
 
-   Simply download these files and place them into the `models/` folder in your project. This allows you to run the pipelines without manually retraining.
+   Simply download these files and place them into the `data/models/` folder in your project. This allows you to run the pipelines without manually retraining.
 
 2. Train Your Own Models  
    The training scripts are provided in the `training_notebooks/` folder. These Jupyter notebooks use Roboflow datasets and the Ultralytics YOLO frameworks to train various detection tasks:
@@ -97,7 +97,7 @@ This repository relies on trained models for detecting basketballs, players, and
    - `basketball_court_keypoint_training.ipynb`: Uses YOLOv8 to detect keypoints on the court (e.g., lines, corners, key zones).
    - `basketball_player_detection_training.ipynb`: Trains a player detection model (using YOLO v11) to identify players in each frame.
 
-   You can easily run these notebooks in Google Colab or another environment with GPU access. After training, download the newly generated `.pt` files and place them in the `models/` folder.
+   You can easily run these notebooks in Google Colab or another environment with GPU access. After training, download the newly generated `.pt` files and place them in `data/models/`.
 
 ## Once you have your models in place, you may proceed with the usage steps described above. If you want to retrain or fine-tune for your specific dataset, remember to adjust the paths in the notebooks and in `configs/` (or the CLI defaults) to point to the newly generated models.
 
@@ -110,13 +110,16 @@ You can run this repository’s core functionality (analysis pipeline) with Pyth
 Run the pipeline from the repository root (after `pip install -e .`):
 
 ```bash
-python -m basketball_analysis path_to_input_video.mp4 --output_video output_videos/output_result.avi
+python -m basketball_analysis data/input/your_video.mp4 --output_video data/output/output_result.avi
 ```
+
+Default paths for models, stubs, the court image, and the default output file are resolved from the repository root (the directory that contains `data/` and `src/`), independent of your current working directory. Paths you pass for `input_video` and `--output_video` are interpreted normally (typically relative to the shell’s current directory).
 
 You can also use `python main.py …` (thin wrapper) or the `basketball-analysis` console script.
 
-- By default, intermediate “stubs” (pickled detection results) are used if found, allowing you to skip repeated detection/tracking.
+- By default, intermediate “stubs” (pickled detection results) under `data/stubs/` are used if found, allowing you to skip repeated detection/tracking.
 - Use the `--stub_path` flag to specify a custom stub folder, or disable stubs if you want to run everything fresh.
+- Override the repository root with the environment variable `BASKETBALL_ANALYSIS_ROOT` if your project layout differs (for example in some container setups).
 
 ### 2) Using Docker
 
@@ -130,16 +133,16 @@ docker build -t basketball-analysis .
 
 ```bash
 docker run \
-  -v $(pwd)/videos:/app/videos \
-  -v $(pwd)/output_videos:/app/output_videos \
+  -v $(pwd)/data:/app/data \
   basketball-analysis \
-  videos/input_video.mp4 --output_video output_videos/output_result.avi
+  data/input/input_video.mp4 --output_video data/output/output_result.avi
 ```
 
 ---
 
 ## 🏰 Project Structure
 
+- `data/` — Local data (not all of it is committed): `models/` (`.pt` weights), `stubs/` (pickled intermediates), `assets/` (court images), `input/` (sample videos), `output/` (rendered videos and exports).
 - `pyproject.toml` — Package metadata and dependencies (install with `pip install -e .`).
 - `src/basketball_analysis/` — Installable Python package (src layout).
   - `cli.py` — CLI entry: reads video, runs detection/tracking, team assignment, drawing, saves output.
@@ -150,7 +153,7 @@ docker run \
   - `pass_and_interception_detector/` — Passes and interceptions.
   - `court_keypoint_detector/` — Court keypoints via YOLO.
   - `team_assigner/` — Jersey-color team assignment (CLIP).
-  - `configs/` — Default paths for models, stubs, and output video.
+  - `configs/` — Default paths under `data/` (models, stubs, assets, output); supports `BASKETBALL_ANALYSIS_ROOT`.
 - `main.py` — Optional wrapper that calls the same CLI (for `python main.py …` from the repo root).
 
 ---

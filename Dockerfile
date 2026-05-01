@@ -19,6 +19,6 @@ COPY . .
 RUN pip install --no-cache-dir .
 
 # Create necessary directories
-RUN mkdir -p input_videos output_videos models
+RUN mkdir -p data/models data/stubs data/assets data/input data/output
 
 ENTRYPOINT ["python", "-m", "basketball_analysis"]

@@ -6,6 +6,6 @@ dist/
 *.avi
 *.pkl
 .venv
-input_videos/
+data/input/
 *.csv
 .DS_Store

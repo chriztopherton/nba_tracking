@@ -30,6 +30,7 @@ from basketball_analysis.configs import (
     BALL_DETECTOR_PATH,
     COURT_KEYPOINT_DETECTOR_PATH,
     OUTPUT_VIDEO_PATH,
+    COURT_IMAGE_PATH,
 )
 
 
@@ -122,9 +123,7 @@ def main():
     )
 
     # Tactical View
-    tactical_view_converter = TacticalViewConverter(
-        court_image_path="./images/basketball_court.png"
-    )
+    tactical_view_converter = TacticalViewConverter(court_image_path=COURT_IMAGE_PATH)
 
     court_keypoints_per_frame = tactical_view_converter.validate_keypoints(court_keypoints_per_frame)
     tactical_player_positions = tactical_view_converter.transform_players_to_tactical_view(
